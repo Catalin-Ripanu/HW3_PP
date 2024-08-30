@@ -1,22 +1,7 @@
 
 %% Decomentați linia de mai jos pentru testare mai detaliată.
 %% ATENȚIE: pe vmchecker linia este comentată.
-detailed_mode_disabled :- !, fail.
-
-% apply_moves/3
-% apply_moves(+Board, +Moves, -NewBoard)
-% Apllies a series of moves specified as coordinates to a UTTT board.
-apply_moves(State, [], State).
-apply_moves(State, [Move], NewState) :-
-		makeMove(State, Move, NewState), !.
-apply_moves(State, [Move | T], NewState) :-
-		makeMove(State, Move, IntermState), !,
-		apply_moves(IntermState, T, NewState).
-apply_moves(State, [Move | T], _) :- !,
-		format("Apply moves failed in boards:~n"), printBoards(State),
-		format("when trying to apply [~w], with moves remaining: ~w~n", [Move, T]),
-		false.
-
+%detailed_mode_disabled :- !, fail.
 
 tt(getBoards, [
        exp("initialState(S), getBoards(S, Y)",
@@ -207,3 +192,56 @@ tt(dummy_last, [
        exp("initialState(S), moves2a(Moves), apply_moves(S, Moves, Y), dummy_last(Y, Move), makeMove(Y, Move, Z), dummy_last(Z, N)",
 	   ['N', (ne, s), cond('validMove(Z, N)')])
 	]).
+
+
+tt(movePriority, [
+       exp("uttt(5, S), getBoard(S, nw, B), movePriority(x, B, ne, P)",
+     ['P', 0]),
+       exp("uttt(5, S), getBoard(S, nw, B), movePriority(0, B, ne, P)",
+     ['P', 1]),
+       exp("initialState(S), getBoard(S, e, B), movePriority(x, B, se, P)",
+     ['P', 2]),
+       exp("initialState(S), getBoard(S, e, B), movePriority(x, B, c, P)",
+     ['P', 3]),
+       exp("uttt(4, S), getBoard(S, nw, B), movePriority(x, B, sw, P)",
+     ['P', 4]),
+       exp("uttt(4, S), getBoard(S, s, B), movePriority(x, B, e, P)",
+     ['P', 4])
+  ]).
+
+
+tt(bestIndividualMoves, [
+       exp("initialState(S), getBoard(S, w, B), getNextPlayer(S, P), bestIndividualMoves(P, B, Moves)",
+     ['Moves', [nw, ne, sw, se, c, n, w, e, s]]),
+       exp("uttt(4, S), getBoard(S, nw, B), getNextPlayer(S, P), bestIndividualMoves(P, B, Moves)",
+     ['Moves', [e, s, nw, ne, sw, se]]),
+       exp("uttt(4, S), getBoard(S, c, B), getNextPlayer(S, P), bestIndividualMoves(P, B, Moves)",
+     ['Moves', [n, ne, nw, w, sw]]),
+       exp("uttt(4, S), getBoard(S, ne, B), getNextPlayer(S, P), bestIndividualMoves(P, B, Moves)",
+     ['Moves', [e, s, se, nw, ne, n]]),
+       exp("uttt(5, S), getBoard(S, nw, B), getNextPlayer(S, P), bestIndividualMoves(P, B, Moves)",
+     ['Moves', [ne, n, c]]),
+       exp("uttt(5, S), getBoard(S, ne, B), getNextPlayer(S, P), bestIndividualMoves(P, B, Moves)",
+     ['Moves', [n, ne, s, se]])
+  ]).
+
+tt(narrowGreedy, [
+       exp("initialState(S), narrowGreedy(S, M)", ['M', (nw, nw)]),
+       exp("uttt(2,S), narrowGreedy(S, M)", ['M', (nw, c)]),
+       exp("uttt(3,S), narrowGreedy(S, M)", ['M', (c, ne)]),
+       exp("uttt(4,S), narrowGreedy(S, M)", ['M', n])
+   ]).
+
+tt(greedy, [
+       exp("initialState(S), greedy(S, M)", ['M', (nw, nw)]),
+       exp("uttt(1, S), bestMoves(S, Mvs)", ['Mvs', [nw, ne, sw, c, e, se, n, s, w]]),
+       exp("uttt(2, S), greedy(S, M)", ['M', (nw, c)]),
+       exp("uttt(3, S), greedy(S, M)", ['M', (c, nw)]),
+       exp("uttt(4, S), bestMoves(S, Mvs)", ['Mvs', [n, ne, nw, sw, w]])
+   ]).
+
+tt(strats, [
+       wait, exp("play(narrowGreedy, narrowGreedy, _, W)", ['W', r]),
+       wait, exp("play(narrowGreedy, greedy, _, W)", ['W', 0]),
+       wait, exp("play(greedy, narrowGreedy, _, W)", ['W', x])
+   ]).

@@ -153,24 +153,61 @@ dummy_first(State, Move) :- getNextAvailableBoards(State,L),length(L,Res),nth0(0
 
 % dummy_last/2
 % dummy_last(+State, -NextMove)
-% Predicatul leagă NextMove la următoarea mutare pentru starea State.
+% Predicatul leagă NextMove la următoarea mutare pentru starea State.mak
 % Strategia este foarte simplă: va fi aleasă cea mai din dreapta-jos mutare posibilă
 % (ultima din lista de poziții disponibile).
 cons(Var):- Var = 8.
 dummy_last(State,Move) :- cons(J),getNextAvailableBoards(State,L1),reverse(L1,L),length(L,Res),nth0(0,L,T),positions(P),((\+ Res == 1) ->(getBoard(State,T,UBoard1),reverse(UBoard1,UBoard),getPos(UBoard,Aux,''),nth0(Aux1,P,Aux),I is J-Aux1,nth0(I,P,M1),Move = (T,M1)) ;getBoard(State,T,Board1),reverse(Board1,Board),getPos(Board,MoveAux,''),nth0(Aux,P,MoveAux),U is J - Aux,nth0(U,P,Move)).
 
+% ======== Etapa 2
 
+% movePriority/4
+% movePriority(+Player, +Board, +Move, -Priority)
+% Calculează prioritatea mutării Move pentru jucătorul Player, într-o
+% tablă individuală Board. Vezi enunț.
+makeMoveSingle(Player,Board,Move,Res) :-positions(P),replace(Board,X,Player,Res),nth0(X,P,Move).
+movePriority(Player, Board, Move, Priority) :- makeMoveSingle(Player,Board,Move,Res1),
+    player_wins(Player,Res1) -> Priority = 0,!
+    ; (nextPlayer(Player,Next),makeMoveSingle(Next,Board,Move,Res2),
+      player_wins(Next,Res2) -> Priority = 1,!
+    ;  (   empty_board(Empty), Board == Empty,member(Move,[nw,ne,sw,se]) ->Priority = 2,!
+     ;  (  \+ member(Player,Board),nth0(4,Board,0),member(Move,[nw,ne,sw,se]) -> Priority = 3,!
+      ;  ( \+ member(Player,Board),nth0(4,Board,''),Move == c -> Priority = 3
+      ; (  makeMoveSingle(Player,Board,Move,Res3),positions(Pos),findall(Y,(member(Y,Pos),nth0(Index,Pos,Y),nth0(Index,Res3,'')),Res4),findall(U,(member(U,Res4),makeMoveSingle(Player,Res3,U,Res5),player_wins(Player,Res5)),Res6),length(Res6,L),L>0 ->
+      Priority = 4,!
+      ; (  member(Move,[nw,ne,sw,se]) -> Priority = 5,!
+      ;   Priority = 6,!)))))).
 
+% bestIndividualMoves/3
+% bestIndividualMoves(+P, +Board, -Moves)
+% Leagă Moves la o listă cu toate mutările disponibile, în ordinea
+% priorității lor.
+%
+% Hint: construiți o listă de perechi (prioritate, mutare) și folosiți
+% sortMoves/2 pentru a obține lista de mutări, în ordinea
+% priorității..auxPriority([],[],_,_).
+aux1(H,Board,Vec) :- findall(X,(member(X,H),getPos(Board,X,'')),Vec).
+auxPriority([],[],_,_).
+auxPriority([HL|T],[(PL,HL)|TL1],P,Board) :- movePriority(P,Board,HL,PL),auxPriority(T,TL1,P,Board).
+auxPriority1([HL|T],L,P,Board) :-aux1([HL|T],Board,Vec),auxPriority(Vec,L,P,Board).
+bestIndividualMoves(P,Board, Moves) :- positions(Pos),auxPriority1(Pos,Res,P,Board),sortMoves(Res,Moves).
 
+% narrowGreedy/2
+% narrowGreedy(+State, -Move)
+% Strategie care întotdeauna ia cea mai bună mutare individuală.
+% Dacă sunt mai multe table disponibile, ia tabla care este cea mai bună
+% mutare individuală în raport cu U-board.
+narrowGreedy(State, Res) :- getUBoard(State,UBoard),getNextPlayer(State,Priority),getNextAvailableBoards(State,Val),(length(Val,1) -> nth0(0,Val,UPos),bestIndividualMoves(Priority,UBoard,Moves),member(UPos,Moves),getBoard(State,UPos,B),bestIndividualMoves(Priority,B,Moves1),nth0(0,Moves1,Pos),Res = Pos,!
+                                                                                        ;   (getUBoard(State,UBoard),getNextPlayer(State,Priority),getNextAvailableBoards(State,Val),bestIndividualMoves(Priority,UBoard,LU),findall(Res1,(member(Res1,LU),member(Res1,Val)),Res2),nth0(0,Res2,UPos),getBoard(State,UPos,B),bestIndividualMoves(Priority,B,Res3),nth0(0,Res3,Pos)),Res = (UPos,Pos)).
 
+% bestMoves/2
+% bestMoves(+State, -Moves)
+% Leagă Moves la o listă care conține toate mutările disponibile, în
+% ordinea priorității lor, după ordonarea prezentată în enunț.
+bestMoves(_,_).
 
-
-
-
-
-
-
-
-
-
-
+% greedy/2
+% greedy(+State, -Move)
+% Strategie care alege cea mai bună mutare, bazat pe rezultatul lui
+% bestMoves/2.
+greedy(State, Move) :- bestMoves(State,Res),nth0(0,Res,Move).

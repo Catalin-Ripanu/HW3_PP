@@ -5,6 +5,7 @@
 %% Tester
 
 testtimelimit(10). % in seconds
+testtimelimitShort(1). % in seconds
 
 test_points(show). % uncomment to show points in non-vmchecker mode.
 %test_points(hide) :- test_mode(vmchecker); \+ test_points(show).
@@ -105,7 +106,7 @@ total_units(TT, Tot, A, B, C) :-
     !, total_units([counted|TT], TotR, A, B, C), Tot is TotR + 1.
 
 test(T, NEx, Idx, Fraction, Unit, PointsIn, PointsOut) :-
-        (   NEx == dry, !, Ex = dry, TimeLimit = 0.1
+        (   NEx == dry, !, Ex = dry, testtimelimitShort(TimeLimit)
         ;   testtimelimit(TimeLimit),
             IdxI is Idx + 96, char_code(CEx, IdxI),
             (   NEx == none, !, swritef(Ex, '%w|', [CEx])
